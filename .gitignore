@@ -7,6 +7,7 @@ __pycache__/
 
 # Other files and folders
 .settings/
+wandb/
 
 # Executables
 *.swf
