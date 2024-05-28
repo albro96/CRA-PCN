@@ -1,8 +1,8 @@
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3, 4, 5"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import argparse
-import os
 import numpy as np
 import torch
 import json
@@ -17,7 +17,6 @@ import wandb
 import math
 from models.crapcn import CRAPCN, CRAPCN_d
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 TRAIN_NAME = os.path.splitext(os.path.basename(__file__))[0]
 
@@ -84,7 +83,7 @@ def PCNConfig():
     #
     __C.CONST = edict()
 
-    __C.CONST.NUM_WORKERS = 8
+    __C.CONST.NUM_WORKERS = 16
     __C.CONST.N_INPUT_POINTS = 2048
 
     #
@@ -102,6 +101,7 @@ def PCNConfig():
     __C.NETWORK = edict()
     __C.NETWORK.UPSAMPLE_FACTORS = [2, 2, 1, 8]  # 16384
     __C.NETWORK.KP_EXTENTS = [0.1, 0.1, 0.05, 0.025]  # 16384
+    __C.NETWORK.GRAD_NORM_CLIP = 5  # 0 for off
     #
     # Train
     #
@@ -109,14 +109,14 @@ def PCNConfig():
     __C.TRAIN.BATCH_SIZE = 30
     __C.TRAIN.N_EPOCHS = 400
     __C.TRAIN.SAVE_FREQ = 25
-    __C.TRAIN.LEARNING_RATE = 0.001
+    __C.TRAIN.LEARNING_RATE = 0.0005  # 0.001
     __C.TRAIN.LR_MILESTONES = [50, 100, 150, 200, 250]
     __C.TRAIN.LR_DECAY_STEP = 50
     __C.TRAIN.WARMUP_STEPS = 200
     __C.TRAIN.WARMUP_EPOCHS = 20
     __C.TRAIN.GAMMA = 0.5
     __C.TRAIN.BETAS = (0.9, 0.999)
-    __C.TRAIN.WEIGHT_DECAY = 0
+    __C.TRAIN.WEIGHT_DECAY = 0.01
     __C.TRAIN.LR_DECAY = 150
 
     #

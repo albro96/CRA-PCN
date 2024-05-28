@@ -83,6 +83,9 @@ class Manager:
             self.test_record_file.flush()
 
     def train(self, model, train_data_loader, val_data_loader, cfg):
+        n_batches = len(train_data_loader)
+        if cfg.LOG_DATA:
+            wandb.watch(model, log="gradients", log_freq=n_batches)
 
         init_epoch = 0
         steps = 0
@@ -116,11 +119,16 @@ class Manager:
             total_partial = 0
 
             batch_end_time = time.time()
-            n_batches = len(train_data_loader)
+            # n_batches = len(train_data_loader)
             learning_rate = self.optimizer.param_groups[0]["lr"]
+
+            # self.validate(cfg, model=model, val_data_loader=val_data_loader)
+
             for batch_idx, (taxonomy_ids, model_ids, data) in tqdm(
                 enumerate(train_data_loader), total=len(train_data_loader)
             ):
+                self.optimizer.zero_grad()  # bra
+
                 for k, v in data.items():
                     data[k] = utils.helpers.var_or_cuda(v)
 
@@ -134,8 +142,16 @@ class Manager:
                     pcds_pred, partial, gt, sqrt=True
                 )
 
-                self.optimizer.zero_grad()
+                # self.optimizer.zero_grad()
                 loss_total.backward()
+
+                if cfg.NETWORK.GRAD_NORM_CLIP > 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        model.parameters(),
+                        cfg.NETWORK.GRAD_NORM_CLIP,
+                        norm_type=2,
+                    )
+
                 self.optimizer.step()
 
                 cd_pc_item = losses[0].item() * 1e3
@@ -245,6 +261,7 @@ class Manager:
         self.test_record_file.close()
 
     def validate(self, cfg, model=None, val_data_loader=None, outdir=None):
+        ctr = 0
         # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
         torch.backends.cudnn.benchmark = True
 
@@ -277,6 +294,33 @@ class Manager:
                 loss_total, losses, _ = get_loss_clamp(
                     pcds_pred, partial, gt, sqrt=True
                 )
+
+                if ctr < 2 and cfg.LOG_DATA:
+                    _, _, _, P3 = pcds_pred
+                    wandb.log(
+                        {
+                            f"val/pcd/partial-{ctr}": wandb.Object3D(
+                                {
+                                    "type": "lidar/beta",
+                                    "points": partial[0].detach().cpu().numpy(),
+                                }
+                            ),
+                            f"val/pcd/gt-{ctr}": wandb.Object3D(
+                                {
+                                    "type": "lidar/beta",
+                                    "points": gt[0].detach().cpu().numpy(),
+                                }
+                            ),
+                            f"val/pcd/recon-{ctr}": wandb.Object3D(
+                                {
+                                    "type": "lidar/beta",
+                                    "points": P3[0].detach().cpu().numpy(),
+                                }
+                            ),
+                        },
+                        step=self.epoch,
+                    )
+                    ctr += 1
 
                 # get metrics
                 cdc = losses[0].item() * 1e3
