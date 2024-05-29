@@ -58,7 +58,7 @@ def PCNConfig():
     )
     __C.DATASETS.SHAPENET = edict()
     __C.DATASETS.SHAPENET.CATEGORY_FILE_PATH = (
-        "/storage/share/repos/CRA-PCN/datasets/ShapeNet.json"
+        "/storage/share/repos/CRA-PCN/datasets/ShapeNet_airplane.json"
     )
     __C.DATASETS.SHAPENET.N_RENDERINGS = 8
     __C.DATASETS.SHAPENET.N_POINTS = 2048
@@ -98,10 +98,12 @@ def PCNConfig():
     #
     # Network
     #
+    # cant find the references to these values anywhere in the code? except for gradnormclip, added by bra
     __C.NETWORK = edict()
     __C.NETWORK.UPSAMPLE_FACTORS = [2, 2, 1, 8]  # 16384
     __C.NETWORK.KP_EXTENTS = [0.1, 0.1, 0.05, 0.025]  # 16384
-    __C.NETWORK.GRAD_NORM_CLIP = 5  # 0 for off
+
+    __C.NETWORK.GRAD_NORM_CLIP = 10  # 0 for off
     #
     # Train
     #
@@ -109,15 +111,17 @@ def PCNConfig():
     __C.TRAIN.BATCH_SIZE = 30
     __C.TRAIN.N_EPOCHS = 400
     __C.TRAIN.SAVE_FREQ = 25
-    __C.TRAIN.LEARNING_RATE = 0.0005  # 0.001
+    __C.TRAIN.LEARNING_RATE = 0.001  # 0.001
     __C.TRAIN.LR_MILESTONES = [50, 100, 150, 200, 250]
     __C.TRAIN.LR_DECAY_STEP = 50
     __C.TRAIN.WARMUP_STEPS = 200
     __C.TRAIN.WARMUP_EPOCHS = 20
     __C.TRAIN.GAMMA = 0.5
     __C.TRAIN.BETAS = (0.9, 0.999)
-    __C.TRAIN.WEIGHT_DECAY = 0.01
     __C.TRAIN.LR_DECAY = 150
+    __C.TRAIN.WEIGHT_DECAY = 0.01
+    __C.TRAIN.LOSS_WEIGHT = 1e3
+    __C.TRAIN.CD_NORM = 1
 
     #
     # Test
@@ -231,5 +235,7 @@ if __name__ == "__main__":
         # set all other train/ metrics to use this step
         wandb.define_metric("train/*", step_metric="epoch")
         wandb.define_metric("val/*", step_metric="epoch")
+
+    torch.autograd.set_detect_anomaly(True)
 
     train_net(cfg)
